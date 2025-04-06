@@ -2,6 +2,7 @@
 import '../styles/globals.css';
 import type { AppProps } from 'next/app';
 import { Noto_Sans } from 'next/font/google';
+import { AuthProvider } from '@/contexts/AuthContext';
 
 // Configure the font with Latin and Devanagari subsets
 const notoSans = Noto_Sans({
@@ -10,10 +11,12 @@ const notoSans = Noto_Sans({
     variable: '--font-noto-sans',
 });
 
-export default function MyApp({ Component, pageProps }: AppProps) {
+export default function App({ Component, pageProps }: AppProps) {
     return (
-        <div className={`${notoSans.variable} antialiased dark`}>
-            <Component {...pageProps} />
-        </div>
+        <AuthProvider>
+            <div className={`${notoSans.variable} antialiased dark`}>
+                <Component {...pageProps} />
+            </div>
+        </AuthProvider>
     );
 }

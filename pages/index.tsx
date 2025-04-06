@@ -3,8 +3,41 @@ import Link from "next/link";
 import TypingAnimation from "@/components/TypingAnimation";
 import Head from "next/head";
 import { FaCheckCircle, FaFileAlt, FaLightbulb, FaDownload } from "react-icons/fa";
+import Footer from "../components/Footer";
+import Testimonials from "@/components/Testimonials";
+import LoginModal from "@/components/LoginModal";
+import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/router";
 
-export default function Home() {
+interface OtplessUser {
+    token: string;
+    email?: string;
+    name?: string;
+    phone?: string;
+    timestamp?: number;
+}
+
+// Add type declaration for window.otpless
+declare global {
+    interface Window {
+        otpless: (otplessUser?: OtplessUser) => void;
+    }
+}
+
+function HomeContent() {
+    const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+    const { user, isAuthenticated } = useAuth();
+    const router = useRouter();
+
+    const handleCTAClick = () => {
+        if (isAuthenticated) {
+            router.push('/create-resume');
+        } else {
+            setIsLoginModalOpen(true);
+        }
+    };
+
     const features = [
         {
             icon: <FaFileAlt className="w-6 h-6" />,
@@ -28,19 +61,6 @@ export default function Home() {
         }
     ];
 
-    const testimonials = [
-        {
-            name: "Rahul Sharma",
-            role: "Software Engineer",
-            content: "MeraResumeBanao helped me create a professional resume that landed me multiple interviews!"
-        },
-        {
-            name: "Priya Patel",
-            role: "Marketing Manager",
-            content: "The AI suggestions were incredibly helpful in highlighting my achievements effectively."
-        }
-    ];
-
     return (
         <div className="flex flex-col min-h-screen bg-white text-gray-900 dark:bg-gray-900 dark:text-white transition-colors duration-300 overflow-x-hidden">
             <Head>
@@ -55,10 +75,15 @@ export default function Home() {
                 />
                 <script dangerouslySetInnerHTML={{
                     __html: `
-                        function otpless(otplessUser) {
-                            const token = otplessUser.token;
-                            console.log('Token:', token);
-                            console.log('User Details:', JSON.stringify(otplessUser));
+                        window.otpless = (otplessUser) => {
+                            if (otplessUser && otplessUser.token) {
+                                console.log('Token:', otplessUser.token);
+                                console.log('User Details:', JSON.stringify(otplessUser));
+                                // You can handle the user data here or redirect to another page
+                                window.location.href = '/create-resume';
+                            } else {
+                                console.error('No user data received from OTPLESS');
+                            }
                         }
                     `}} />
             </Head>
@@ -68,11 +93,21 @@ export default function Home() {
                 <h1 className="text-5xl md:text-6xl font-extrabold leading-tight">
                     <TypingAnimation />
                 </h1>
-                <div className="flex space-x-6 text-sm font-medium text-gray-700 dark:text-gray-300 mt-4 md:mt-0">
-                    <Link href="/create-resume" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Create Resume</Link>
-                    <Link href="/how-it-works" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">How it Works</Link>
-                    <Link href="/pricing" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Pricing</Link>
-                    <Link href="/buy-bundle" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Buy Resume Bundle</Link>
+                <div className="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-6 text-sm font-medium text-gray-700 dark:text-gray-300 mt-4 md:mt-0">
+                    {isAuthenticated && (
+                        <div className="flex items-center space-x-2 bg-green-50 dark:bg-green-900/20 px-4 py-2 rounded-full border border-green-200 dark:border-green-800">
+                            <span className="text-green-500">✓</span>
+                            <span className="text-base font-semibold text-green-700 dark:text-green-400">
+                                Welcome, {user?.name || user?.email || 'User'}
+                            </span>
+                        </div>
+                    )}
+                    <div className="flex space-x-6">
+                        <Link href="/create-resume" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Create Resume</Link>
+                        <Link href="/how-it-works" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">How it Works</Link>
+                        <Link href="/pricing" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Pricing</Link>
+                        <Link href="/buy-bundle" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Buy Resume Bundle</Link>
+                    </div>
                 </div>
             </nav>
 
@@ -102,12 +137,7 @@ export default function Home() {
                                 ))}
                             </div>
                             <button
-                                onClick={() => {
-                                    const modal = document.getElementById("signInModal");
-                                    if (modal) {
-                                        modal.style.display = "block";
-                                    }
-                                }}
+                                onClick={handleCTAClick}
                                 className="my-12 w-fit inline-flex items-center justify-center
                                 bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800
                                 text-white font-semibold px-8 py-4 rounded-full shadow-lg transition-all
@@ -118,6 +148,7 @@ export default function Home() {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                 </svg>
                             </button>
+                            <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
                         </div>
                         <div className="flex-1 flex justify-center">
                             <div className="w-full max-w-md h-96 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900 dark:to-blue-800 rounded-2xl shadow-xl flex items-center justify-center">
@@ -130,67 +161,14 @@ export default function Home() {
                     </div>
                 </section>
 
-                {/* Testimonials Section */}
-                <section className="py-16 bg-gray-50 dark:bg-gray-800">
-                    <div className="max-w-7xl mx-auto px-8">
-                        <h2 className="text-3xl font-bold text-center mb-12">What Our Users Say</h2>
-                        <div className="grid md:grid-cols-2 gap-8">
-                            {testimonials.map((testimonial, index) => (
-                                <div key={index} className="bg-white dark:bg-gray-700 p-6 rounded-xl shadow-md">
-                                    <p className="text-gray-600 dark:text-gray-300 mb-4">{testimonial.content}</p>
-                                    <div className="flex items-center">
-                                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center text-blue-500 dark:text-blue-300 font-bold">
-                                            {testimonial.name.charAt(0)}
-                                        </div>
-                                        <div className="ml-4">
-                                            <h4 className="font-semibold">{testimonial.name}</h4>
-                                            <p className="text-sm text-gray-500 dark:text-gray-400">{testimonial.role}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </section>
+                <Testimonials />
             </main>
 
-            {/* Footer */}
-            <footer className="bg-gray-100 dark:bg-gray-800 py-8">
-                <div className="max-w-7xl mx-auto px-8">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-                        <div>
-                            <h3 className="text-lg font-semibold mb-4">MeraResumeBanao</h3>
-                            <p className="text-gray-600 dark:text-gray-400">Create professional resumes with AI assistance</p>
-                        </div>
-                        <div>
-                            <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
-                            <ul className="space-y-2">
-                                <li><Link href="/create-resume" className="text-gray-600 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400">Create Resume</Link></li>
-                                <li><Link href="/how-it-works" className="text-gray-600 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400">How it Works</Link></li>
-                                <li><Link href="/pricing" className="text-gray-600 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400">Pricing</Link></li>
-                            </ul>
-                        </div>
-                        <div>
-                            <h3 className="text-lg font-semibold mb-4">Support</h3>
-                            <ul className="space-y-2">
-                                <li><Link href="/faq" className="text-gray-600 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400">FAQ</Link></li>
-                                <li><Link href="/contact" className="text-gray-600 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400">Contact Us</Link></li>
-                                <li><Link href="/privacy" className="text-gray-600 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400">Privacy Policy</Link></li>
-                            </ul>
-                        </div>
-                        <div>
-                            <h3 className="text-lg font-semibold mb-4">Legal</h3>
-                            <ul className="space-y-2">
-                                <li><Link href="/terms" className="text-gray-600 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400">Terms of Service</Link></li>
-                                <li><Link href="/cookies" className="text-gray-600 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400">Cookie Policy</Link></li>
-                            </ul>
-                        </div>
-                    </div>
-                    <div className="mt-8 pt-8 border-t border-gray-200 dark:border-gray-700 text-center text-gray-600 dark:text-gray-400">
-                        &copy; {new Date().getFullYear()} MeraResumeBanao. All rights reserved.
-                    </div>
-                </div>
-            </footer>
+            <Footer />
         </div>
     );
+}
+
+export default function Home() {
+    return <HomeContent />;
 }

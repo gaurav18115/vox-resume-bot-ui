@@ -65,7 +65,9 @@ export default function Home() {
 
             {/* Navigation */}
             <nav className="w-full px-8 py-4 bg-white dark:bg-gray-800 shadow-sm flex flex-col md:flex-row justify-between items-center sticky top-0 z-50">
-                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">MeraResumeBanao</div>
+                <h1 className="text-5xl md:text-6xl font-extrabold leading-tight">
+                    <TypingAnimation />
+                </h1>
                 <div className="flex space-x-6 text-sm font-medium text-gray-700 dark:text-gray-300 mt-4 md:mt-0">
                     <Link href="/create-resume" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Create Resume</Link>
                     <Link href="/how-it-works" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">How it Works</Link>
@@ -76,12 +78,10 @@ export default function Home() {
 
             {/* Hero Section */}
             <main className="flex-1">
-                <section className="py-20 px-8 max-w-7xl mx-auto">
+                <section className="py-12 px-8 max-w-7xl mx-auto">
                     <div className="flex flex-col md:flex-row items-center justify-between gap-12">
                         <div className="flex-1 space-y-8">
-                            <h1 className="text-5xl md:text-6xl font-extrabold leading-tight">
-                                <TypingAnimation />
-                            </h1>
+
                             <h2 className="text-2xl md:text-3xl font-semibold text-gray-600 dark:text-gray-300 max-w-lg">
                                 Build your perfect resume with AI assistance
                             </h2>
@@ -108,7 +108,10 @@ export default function Home() {
                                         modal.style.display = "block";
                                     }
                                 }}
-                                className="mt-8 w-fit inline-flex items-center justify-center bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white font-semibold px-8 py-4 rounded-full shadow-lg transition-all transform hover:scale-105 hover:shadow-xl"
+                                className="my-12 w-fit inline-flex items-center justify-center
+                                bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800
+                                text-white font-semibold px-8 py-4 rounded-full shadow-lg transition-all
+                                transform hover:scale-[1.05] hover:shadow-xl"
                             >
                                 Craft Your Dream Resume Now
                                 <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

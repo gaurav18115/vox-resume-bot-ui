@@ -36,7 +36,11 @@ const TypingAnimation = () => {
 
     return (
         <div className="flex flex-col items-center gap-4">
-            <div className="text-3xl md:text-3xl font-mono text-white">
+            <div
+                className={`h-11 font-mono text-white ${
+                    isHindi ? 'text-3xl md:text-3xl' : 'text-2xl md:text-2xl'
+                }`}
+            >
                 {displayedText}
                 <span className="animate-blink">|</span>
             </div>

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import Head from "next/head";
 import Link from "next/link";
 import TypingAnimation from "@/components/TypingAnimation";
@@ -18,9 +18,9 @@ export default function CreateResume() {
     const [isRecording, setIsRecording] = useState(false);
     const [hasGreeted, setHasGreeted] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const audioRef = useRef<HTMLAudioElement>(null);
     const [isGreetingPlaying, setIsGreetingPlaying] = useState(false);
     const [ttsService, setTtsService] = useState<AzureStreamingTTS | null>(null);
+    const [sessionStarted, setSessionStarted] = useState(false);
 
     useEffect(() => {
         console.log('Auth State:', {
@@ -48,42 +48,30 @@ export default function CreateResume() {
         }
     }, []);
 
-    useEffect(() => {
-        const greetUser = async () => {
-            if (!isLoading && !hasGreeted && user && !isGreetingPlaying && ttsService) {
-                try {
-                    setError(null);
-                    setIsGreetingPlaying(true);
+    const handleStartSession = async () => {
+        if (!ttsService || hasGreeted) return;
 
-                    const greetingText = `Hello ${user.name || 'there'}, I'm your AI resume assistant. I'll help you create a professional resume. Please introduce yourself and tell me about your professional experience.`;
+        try {
+            setError(null);
+            setIsGreetingPlaying(true);
+            setSessionStarted(true);
 
-                    console.log('Starting streaming TTS...');
-                    await ttsService.speak(greetingText);
-                    console.log('Streaming TTS completed');
+            const greetingText = `Hello ${user?.name || 'there'}, I'm your AI resume assistant. I'll help you create a professional resume. Please introduce yourself and tell me about your professional experience.`;
 
-                    setHasGreeted(true);
-                } catch (error) {
-                    console.error('Error during TTS:', error);
-                    setError('Unable to initialize voice assistant. Please try refreshing the page.');
-                    setHasGreeted(true);
-                } finally {
-                    setIsGreetingPlaying(false);
-                }
-            }
-        };
+            console.log('Starting streaming TTS...');
+            await ttsService.speak(greetingText);
+            console.log('Streaming TTS completed');
 
-        const timer = setTimeout(greetUser, 2000);
-        return () => {
-            clearTimeout(timer);
-            if (ttsService) {
-                ttsService.stop();
-            }
-        };
-    }, [isLoading, hasGreeted, user, isGreetingPlaying, ttsService]);
-
-    const handleEnded = () => {
-        console.log('Audio playback ended');
-        setIsGreetingPlaying(false);
+            setHasGreeted(true);
+            // Start recording automatically after greeting
+            setIsRecording(true);
+        } catch (error) {
+            console.error('Error during TTS:', error);
+            setError('Unable to initialize voice assistant. Please try refreshing the page.');
+            setHasGreeted(true);
+        } finally {
+            setIsGreetingPlaying(false);
+        }
     };
 
     const handleSendAudio = async (audioBlob: Blob) => {
@@ -96,6 +84,15 @@ export default function CreateResume() {
             console.error('Error processing audio:', error);
         }
     };
+
+    // Cleanup effect
+    useEffect(() => {
+        return () => {
+            if (ttsService) {
+                ttsService.stop();
+            }
+        };
+    }, [ttsService]);
 
     return (
         <div className="flex flex-col min-h-screen bg-white text-gray-900 dark:bg-gray-900 dark:text-white transition-colors duration-300">
@@ -216,20 +213,18 @@ export default function CreateResume() {
 
                             {/* Recording Controls */}
                             <div className="mt-8 flex justify-center">
-                                <button
-                                    onClick={() => setIsRecording(!isRecording)}
-                                    className={`px-6 py-3 rounded-full ${isRecording
-                                        ? 'bg-red-500 hover:bg-red-600'
-                                        : 'bg-blue-500 hover:bg-blue-600'
-                                        } text-white transition-colors duration-200`}
-                                >
-                                    {isRecording ? 'Stop Recording' : 'Start Recording'}
-                                </button>
+                                {!sessionStarted && (
+                                    <button
+                                        onClick={handleStartSession}
+                                        className="px-6 py-3 rounded-full bg-blue-500 hover:bg-blue-600 text-white transition-colors duration-200"
+                                    >
+                                        Start Resume
+                                    </button>
+                                )}
                             </div>
 
                             {/* Hidden Audio Elements */}
                             <div className="hidden">
-                                <audio ref={audioRef} onEnded={handleEnded} />
                                 <OutgoingAudio
                                     startRecording={isRecording}
                                     onSendAudio={handleSendAudio}

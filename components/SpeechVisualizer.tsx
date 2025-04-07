@@ -1,88 +1,81 @@
 import { useEffect, useRef } from 'react';
+import { AzureStreamingTTS } from '@/services/azureStreamingTTS';
 
 interface SpeechVisualizerProps {
-    audioBlob: Blob | null;
     isPlaying: boolean;
+    ttsService: AzureStreamingTTS | null;
 }
 
-export default function SpeechVisualizer({ audioBlob, isPlaying }: SpeechVisualizerProps) {
+export default function SpeechVisualizer({ isPlaying, ttsService }: SpeechVisualizerProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const animationFrameRef = useRef<number | null>(null);
-    const audioContextRef = useRef<AudioContext | null>(null);
-    const analyserRef = useRef<AnalyserNode | null>(null);
-    const sourceRef = useRef<AudioBufferSourceNode | null>(null);
-
-    useEffect(() => {
-        if (!audioBlob || !isPlaying) {
-            if (animationFrameRef.current) {
-                cancelAnimationFrame(animationFrameRef.current);
-            }
-            if (audioContextRef.current) {
-                audioContextRef.current.close();
-            }
-            return;
-        }
-
-        const setupAudioContext = async () => {
-            const audioContext = new AudioContext();
-            audioContextRef.current = audioContext;
-            const analyser = audioContext.createAnalyser();
-            analyserRef.current = analyser;
-            analyser.fftSize = 256;
-
-            const audioUrl = URL.createObjectURL(audioBlob);
-            const response = await fetch(audioUrl);
-            const arrayBuffer = await response.arrayBuffer();
-            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-            const source = audioContext.createBufferSource();
-            source.buffer = audioBuffer;
-            source.connect(analyser);
-            sourceRef.current = source;
-            source.start(0);
-        };
-
-        setupAudioContext();
-
-        return () => {
-            if (animationFrameRef.current) {
-                cancelAnimationFrame(animationFrameRef.current);
-            }
-            if (audioContextRef.current) {
-                audioContextRef.current.close();
-            }
-        };
-    }, [audioBlob, isPlaying]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
-        if (!canvas || !isPlaying || !analyserRef.current) return;
+        if (!canvas || !ttsService) return;
+
+        const analyser = ttsService.getAnalyser();
+        if (!analyser) return;
 
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        const bufferLength = analyserRef.current.frequencyBinCount;
+        // Set canvas size to match display size
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+
+        const bufferLength = analyser.frequencyBinCount;
         const dataArray = new Uint8Array(bufferLength);
 
         const draw = () => {
-            if (!isPlaying) return;
-
             animationFrameRef.current = requestAnimationFrame(draw);
-            analyserRef.current?.getByteFrequencyData(dataArray);
 
-            ctx.fillStyle = 'rgb(200, 200, 200)';
+            analyser.getByteFrequencyData(dataArray);
+
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw background
+            ctx.fillStyle = 'rgb(31, 41, 55)'; // dark:bg-gray-800
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            const barWidth = (canvas.width / bufferLength) * 2.5;
-            let barHeight;
+            const centerY = canvas.height / 2;
+            const barWidth = Math.max(2, (canvas.width / bufferLength) * 2);
+            const gap = 1;
             let x = 0;
 
+            // Draw center line
+            ctx.beginPath();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.moveTo(0, centerY);
+            ctx.lineTo(canvas.width, centerY);
+            ctx.stroke();
+
             for (let i = 0; i < bufferLength; i++) {
-                barHeight = dataArray[i] / 2;
+                const value = dataArray[i];
+                const percent = value / 255;
+                const barHeight = (canvas.height / 2) * percent;
 
-                ctx.fillStyle = `rgb(${barHeight + 100},50,50)`;
-                ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+                // Create gradient for upper bar
+                const gradientUp = ctx.createLinearGradient(0, centerY - barHeight, 0, centerY);
+                gradientUp.addColorStop(0, 'rgba(59, 130, 246, 0.5)'); // blue-500 with transparency
+                gradientUp.addColorStop(1, 'rgb(59, 130, 246)'); // blue-500
 
-                x += barWidth + 1;
+                // Create gradient for lower bar
+                const gradientDown = ctx.createLinearGradient(0, centerY, 0, centerY + barHeight);
+                gradientDown.addColorStop(0, 'rgb(59, 130, 246)'); // blue-500
+                gradientDown.addColorStop(1, 'rgba(59, 130, 246, 0.5)'); // blue-500 with transparency
+
+                // Draw upper bar
+                ctx.fillStyle = gradientUp;
+                ctx.fillRect(x, centerY - barHeight, barWidth, barHeight);
+
+                // Draw lower bar (mirrored)
+                ctx.fillStyle = gradientDown;
+                ctx.fillRect(x, centerY, barWidth, barHeight);
+
+                x += barWidth + gap;
             }
         };
 
@@ -93,14 +86,13 @@ export default function SpeechVisualizer({ audioBlob, isPlaying }: SpeechVisuali
                 cancelAnimationFrame(animationFrameRef.current);
             }
         };
-    }, [isPlaying]);
+    }, [isPlaying, ttsService]);
 
     return (
         <canvas
             ref={canvasRef}
-            width={300}
-            height={100}
-            className="w-full h-24 bg-gray-100 dark:bg-gray-800 rounded-lg"
+            className="w-full h-24 bg-gray-800 rounded-lg"
+            style={{ minHeight: '96px' }}
         />
     );
 } 

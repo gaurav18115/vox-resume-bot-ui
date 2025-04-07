@@ -14,7 +14,6 @@ export default function CreateResume() {
     const router = useRouter();
     const { user, isAuthenticated } = useAuth();
     const [isLoading, setIsLoading] = useState(true);
-    const [incomingAudio, setIncomingAudio] = useState<Blob | null>(null);
     const [isRecording, setIsRecording] = useState(false);
     const [hasGreeted, setHasGreeted] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -74,12 +73,17 @@ export default function CreateResume() {
         }
     };
 
-    const handleSendAudio = async (audioBlob: Blob) => {
+    const handleSendAudio = async () => {
         try {
-            // Here you would typically send the audioBlob to your backend
-            // For now, we'll simulate a response with the same audio
-            setIncomingAudio(audioBlob);
             setIsRecording(false);
+
+            // Simulate AI response
+            if (ttsService) {
+                setIsGreetingPlaying(true);
+                const responseText = "Thank you for sharing that information. Let me help you create a professional resume based on your experience.";
+                await ttsService.speak(responseText);
+                setIsGreetingPlaying(false);
+            }
         } catch (error) {
             console.error('Error processing audio:', error);
         }
@@ -157,7 +161,7 @@ export default function CreateResume() {
                                                     width={64}
                                                     height={64}
                                                     className="rounded-full"
-                                                    alt={'AI Interviewer'}
+                                                    alt={'AI Assistant'}
                                                 />
                                             </div>
                                             {isGreetingPlaying && (
@@ -171,41 +175,8 @@ export default function CreateResume() {
                                     </div>
                                     <div className="flex-grow">
                                         <SpeechVisualizer
-                                            audioBlob={incomingAudio}
                                             isPlaying={isGreetingPlaying}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* User Recording Row */}
-                            <div>
-                                <div className="flex items-center space-x-8">
-                                    <div className="flex-shrink-0">
-                                        <div className="relative">
-                                            <div className={`w-24 h-24 rounded-full border-4 ${isRecording ? 'border-red-500' : 'border-gray-300'
-                                                } flex items-center justify-center`}>
-                                                <Image
-                                                    src={'/icons/mic_minimal_blue.png'}
-                                                    width={64}
-                                                    height={64}
-                                                    className={`rounded-full ${isRecording ? 'animate-pulse' : ''}`}
-                                                    alt={'User Microphone'}
-                                                />
-                                            </div>
-                                            {isRecording && (
-                                                <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2">
-                                                    <span className="px-2 py-1 text-xs font-semibold text-white bg-red-500 rounded-full">
-                                                        Recording
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <div className="flex-grow">
-                                        <SpeechVisualizer
-                                            audioBlob={null}
-                                            isPlaying={isRecording}
+                                            ttsService={ttsService}
                                         />
                                     </div>
                                 </div>

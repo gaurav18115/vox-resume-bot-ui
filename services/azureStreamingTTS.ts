@@ -9,7 +9,7 @@ export class AzureStreamingTTS {
     private isPlaying: boolean = false;
     private currentSource: AudioBufferSourceNode | null = null;
 
-    constructor() {
+    constructor(voiceName: string = "en-US-AvaMultilingualNeural") {
         if (!process.env.NEXT_PUBLIC_AZURE_SPEECH_KEY || !process.env.NEXT_PUBLIC_AZURE_SPEECH_REGION) {
             throw new Error('Azure Speech credentials not found in environment variables');
         }
@@ -20,7 +20,7 @@ export class AzureStreamingTTS {
         );
 
         // Set the voice
-        this.speechConfig.speechSynthesisVoiceName = "en-US-AvaMultilingualNeural";
+        this.speechConfig.speechSynthesisVoiceName = voiceName;
 
         // Increase the chunk size for better audio quality
         this.speechConfig.setProperty(sdk.PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs, "1000");
@@ -99,7 +99,7 @@ export class AzureStreamingTTS {
                 this.synthesizer.synthesisCompleted = () => {
                     console.log('Synthesis completed');
                     // Process any remaining audio in the queue
-                    // this.processAudioQueue();
+                    this.processAudioQueue();
                 };
 
                 // Start synthesis
@@ -167,13 +167,14 @@ export class AzureStreamingTTS {
             const audioBuffer = await this.audioContext.decodeAudioData(audioData);
             const source = this.audioContext.createBufferSource();
             source.buffer = audioBuffer;
+
+            // Connect to analyzer and destination
             source.connect(this.analyser);
             this.analyser.connect(this.audioContext.destination);
 
             source.onended = () => {
                 this.isPlaying = false;
                 this.currentSource = null;
-                this.processAudioQueue();
             };
 
             this.currentSource = source;

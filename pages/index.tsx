@@ -9,6 +9,7 @@ import LoginModal from "@/components/LoginModal";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/router";
+import Navigation from "@/components/Navigation";
 
 interface OtplessUser {
     token: string;
@@ -89,40 +90,18 @@ function HomeContent() {
             </Head>
 
             {/* Navigation */}
-            <nav className="w-full px-8 py-4 bg-white dark:bg-gray-800 shadow-sm flex flex-col md:flex-row justify-between items-center sticky top-0 z-50">
-                <h1 className="text-5xl md:text-6xl font-extrabold leading-tight">
-                    <TypingAnimation />
-                </h1>
-                <div className="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-6 text-sm font-medium text-gray-700 dark:text-gray-300 mt-4 md:mt-0">
-                    {isAuthenticated && (
-                        <div className="flex items-center space-x-2 bg-green-50 dark:bg-green-900/20 px-4 py-2 rounded-full border border-green-200 dark:border-green-800">
-                            <span className="text-green-500">✓</span>
-                            <span className="text-base font-semibold text-green-700 dark:text-green-400">
-                                Welcome, {user?.name || user?.email || 'User'}
-                            </span>
-                        </div>
-                    )}
-                    <div className="flex space-x-6">
-                        <Link href="/create-resume" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Create Resume</Link>
-                        <Link href="/how-it-works" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">How it Works</Link>
-                        <Link href="/pricing" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Pricing</Link>
-                        <Link href="/buy-bundle" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Buy Resume Bundle</Link>
-                    </div>
-                </div>
-            </nav>
-
+            <Navigation />
             {/* Hero Section */}
             <main className="flex-1">
                 <section className="py-12 px-8 max-w-7xl mx-auto">
-                    <div className="flex flex-col md:flex-row items-center justify-between gap-12">
-                        <div className="flex-1 space-y-8">
-
+                    <h1 className="my-4 text-5xl md:text-6xl font-extrabold leading-tight">
+                        <TypingAnimation />
+                    </h1>
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+                        <div className="flex-1 space-y-4">
                             <h2 className="text-2xl md:text-3xl font-semibold text-gray-600 dark:text-gray-300 max-w-lg">
                                 Build your perfect resume with AI assistance
                             </h2>
-                            <p className="text-lg text-gray-700 dark:text-gray-200 max-w-xl">
-                                Create professional resumes that stand out and land you interviews
-                            </p>
                             <div className="space-y-4">
                                 {features.map((feature, index) => (
                                     <div key={index} className="flex items-center gap-4">

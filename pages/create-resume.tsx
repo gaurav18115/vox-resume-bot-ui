@@ -1,14 +1,25 @@
 import { useEffect, useState } from "react";
 import Head from "next/head";
-import Link from "next/link";
-import TypingAnimation from "@/components/TypingAnimation";
 import { useAuth } from "@/contexts/AuthContext";
 import Cookies from 'js-cookie';
 import { useRouter } from 'next/router';
 import OutgoingAudio from "@/components/interview/OutgoingAudio";
 import SpeechVisualizer from "@/components/SpeechVisualizer";
 import { AzureStreamingTTS } from '@/services/azureStreamingTTS';
+import { AzureOpenAIService } from '@/services/azureOpenAI';
 import Image from "next/image";
+import Navigation from "@/components/Navigation";
+
+type Language = {
+    code: string;
+    name: string;
+    voiceName: string;
+};
+
+const LANGUAGES: Language[] = [
+    { code: 'en', name: 'English', voiceName: 'en-US-AvaMultilingualNeural' },
+    { code: 'hi', name: 'हिंदी', voiceName: 'hi-IN-SwaraNeural' }
+];
 
 export default function CreateResume() {
     const router = useRouter();
@@ -19,7 +30,9 @@ export default function CreateResume() {
     const [error, setError] = useState<string | null>(null);
     const [isGreetingPlaying, setIsGreetingPlaying] = useState(false);
     const [ttsService, setTtsService] = useState<AzureStreamingTTS | null>(null);
+    const [openAIService, setOpenAIService] = useState<AzureOpenAIService | null>(null);
     const [sessionStarted, setSessionStarted] = useState(false);
+    const [selectedLanguage, setSelectedLanguage] = useState<Language>(LANGUAGES[0]);
 
     useEffect(() => {
         console.log('Auth State:', {
@@ -37,25 +50,38 @@ export default function CreateResume() {
     }, [isAuthenticated, user, router]);
 
     useEffect(() => {
-        // Initialize TTS service
+        // Initialize services
         try {
-            const service = new AzureStreamingTTS();
-            setTtsService(service);
+            const tts = new AzureStreamingTTS(selectedLanguage.voiceName);
+            const openAI = new AzureOpenAIService();
+            setTtsService(tts);
+            setOpenAIService(openAI);
         } catch (error) {
-            console.error('Failed to initialize TTS service:', error);
-            setError('Unable to initialize voice assistant. Please check your Azure Speech credentials.');
+            console.error('Failed to initialize services:', error);
+            setError('Unable to initialize services. Please check your credentials.');
         }
-    }, []);
+    }, [selectedLanguage]);
 
     const handleStartSession = async () => {
-        if (!ttsService || hasGreeted) return;
+        if (!ttsService || !openAIService || hasGreeted) return;
 
         try {
             setError(null);
             setIsGreetingPlaying(true);
             setSessionStarted(true);
 
-            const greetingText = `Hello ${user?.name || 'there'}, I'm your AI resume assistant. I'll help you create a professional resume. Please introduce yourself and tell me about your professional experience.`;
+            // Generate greeting text using OpenAI
+            const greetingText = await openAIService.generateText({
+                context: "Initial greeting to start the resume creation process",
+                goal: "Greet the user and explain that you'll help them create a professional resume",
+                language: selectedLanguage.code,
+                voice: selectedLanguage.voiceName,
+                userInfo: {
+                    name: user?.name,
+                    email: user?.email,
+                    phone: user?.phone
+                }
+            });
 
             console.log('Starting streaming TTS...');
             await ttsService.speak(greetingText);
@@ -65,8 +91,8 @@ export default function CreateResume() {
             // Start recording automatically after greeting
             setIsRecording(true);
         } catch (error) {
-            console.error('Error during TTS:', error);
-            setError('Unable to initialize voice assistant. Please try refreshing the page.');
+            console.error('Error during session start:', error);
+            setError('Unable to start the session. Please try refreshing the page.');
             setHasGreeted(true);
         } finally {
             setIsGreetingPlaying(false);
@@ -77,10 +103,22 @@ export default function CreateResume() {
         try {
             setIsRecording(false);
 
-            // Simulate AI response
-            if (ttsService) {
+            if (ttsService && openAIService) {
                 setIsGreetingPlaying(true);
-                const responseText = "Thank you for sharing that information. Let me help you create a professional resume based on your experience.";
+
+                // Generate response text using OpenAI
+                const responseText = await openAIService.generateText({
+                    context: "User has shared their information and experience",
+                    goal: "Acknowledge the information and explain next steps for resume creation",
+                    language: selectedLanguage.code,
+                    voice: selectedLanguage.voiceName,
+                    userInfo: {
+                        name: user?.name,
+                        email: user?.email,
+                        phone: user?.phone
+                    }
+                });
+
                 await ttsService.speak(responseText);
                 setIsGreetingPlaying(false);
             }
@@ -93,7 +131,11 @@ export default function CreateResume() {
     useEffect(() => {
         return () => {
             if (ttsService) {
-                ttsService.stop();
+                try {
+                    ttsService.stop();
+                } catch (error) {
+                    console.warn('Error during TTS service cleanup:', error);
+                }
             }
         };
     }, [ttsService]);
@@ -105,28 +147,7 @@ export default function CreateResume() {
                 <meta name="description" content="Create your professional resume with AI assistance" />
             </Head>
 
-            {/* Navigation */}
-            <nav className="w-full px-8 py-4 bg-white dark:bg-gray-800 shadow-sm flex flex-col md:flex-row justify-between items-center sticky top-0 z-50">
-                <h1 className="text-5xl md:text-6xl font-extrabold leading-tight">
-                    <TypingAnimation />
-                </h1>
-                <div className="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-6 text-sm font-medium text-gray-700 dark:text-gray-300 mt-4 md:mt-0">
-                    {isAuthenticated && user ? (
-                        <div className="flex items-center space-x-2 bg-green-50 dark:bg-green-900/20 px-4 py-2 rounded-full border border-green-200 dark:border-green-800">
-                            <span className="text-green-500">✓</span>
-                            <span className="text-base font-semibold text-green-700 dark:text-green-400">
-                                Welcome, {user.name || user.email || user.phone || 'User'}
-                            </span>
-                        </div>
-                    ) : null}
-                    <div className="flex space-x-6">
-                        <Link href="/" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Home</Link>
-                        <Link href="/how-it-works" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">How it Works</Link>
-                        <Link href="/pricing" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Pricing</Link>
-                        <Link href="/buy-bundle" className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors">Buy Resume Bundle</Link>
-                    </div>
-                </div>
-            </nav>
+            <Navigation />
 
             {/* Main Content */}
             <main className="flex-1">
@@ -182,15 +203,37 @@ export default function CreateResume() {
                                 </div>
                             </div>
 
-                            {/* Recording Controls */}
-                            <div className="mt-8 flex justify-center">
+                            {/* Language Selection and Start Button */}
+                            <div className="fixed bottom-8 left-0 right-0 flex flex-col items-center space-y-4">
                                 {!sessionStarted && (
-                                    <button
-                                        onClick={handleStartSession}
-                                        className="px-6 py-3 rounded-full bg-blue-500 hover:bg-blue-600 text-white transition-colors duration-200"
-                                    >
-                                        Start Resume
-                                    </button>
+                                    <>
+                                        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg">
+                                            <label htmlFor="language-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                Select Assistant Language
+                                            </label>
+                                            <select
+                                                id="language-select"
+                                                value={selectedLanguage.code}
+                                                onChange={(e) => {
+                                                    const lang = LANGUAGES.find(l => l.code === e.target.value);
+                                                    if (lang) setSelectedLanguage(lang);
+                                                }}
+                                                className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                            >
+                                                {LANGUAGES.map((lang) => (
+                                                    <option key={lang.code} value={lang.code}>
+                                                        {lang.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <button
+                                            onClick={handleStartSession}
+                                            className="px-6 py-3 rounded-full bg-blue-500 hover:bg-blue-600 text-white transition-colors duration-200 shadow-lg hover:shadow-xl"
+                                        >
+                                            Start Resume
+                                        </button>
+                                    </>
                                 )}
                             </div>
 
